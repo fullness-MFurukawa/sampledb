@@ -1,0 +1,71 @@
+version: '3.8'
+services:
+  command_db:
+    container_name: "command_db"
+    image: mysql:8.0
+    restart: always
+    command: 'mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci'
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: sample_db
+      TZ: 'Asia/Tokyo'
+    ports:
+      - 3306:3306
+    expose:
+      - 3306
+    volumes:
+      - db-command:/var/lib/mysql
+      - ./command/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./command/sql:/docker-entrypoint-initdb.d
+      - ./command/DDL:/etc/ddl
+      - ./logs/command:/var/log/mysql
+    networks:
+      - net
+
+  query_db:
+    container_name: "query_db"
+    image: mysql:8.0
+    restart: always
+    depends_on:
+      - command_db
+    command: 'mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --report-host=command_db'
+    environment:  
+      MYSQL_ROOT_PASSWORD: password
+      TZ: 'Asia/Tokyo'
+    ports:
+      - 3307:3306
+    volumes:
+      - db-query:/var/lib/mysql
+      - ./query/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./query/sql:/docker-entrypoint-initdb.d
+      - ./query/DDL:/etc/ddl
+      - ./logs/query:/var/log/mysql
+    networks:
+      - net
+  
+  db_admin:
+    container_name: "db_admin"
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    depends_on:
+      - command_db
+      - query_db
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOSTS=command_db,query_db
+      - PMA_USER=root
+      - PMA_PASSWORD=password
+    links:
+      - command_db:mysql
+      - query_db:mysql
+    ports:
+      - "3100:80"
+    networks:
+      - net
+
+networks:
+  net:
+
+volumes:
+  db-command:
+  db-query:
