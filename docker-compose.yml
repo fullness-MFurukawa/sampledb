@@ -62,7 +62,6 @@ services:
       - "3100:80"
     networks:
       - net
-
 networks:
   net:
 
